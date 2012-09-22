@@ -16,3 +16,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+# A user for running the service
+user 'slanger' do
+  comment     'slanger system user'
+  system      true
+  shell       '/bin/false'
+  home        node[:slanger][:home_dir]
+  manage_home true
+end
+
+# Custom Ruby and gems for our user
+node['rvm']['user_installs'] = [
+  { 'user'            => 'slanger',
+    'home'            => node[:slanger][:home_dir],
+    'upgrade'         => 'head',
+    'default_ruby'    => 'ruby-1.9.3-p194',
+    'rvm_gem_options' => '',
+    'global_gems'     => [
+      { 'name'    => 'slanger'},
+    ]
+  },
+]
+
+include_recipe 'rvm::user'
+
+# An upstart job for running slanger
+template  '/etc/init/slanger.conf' do
+  source  'etc/init/slanger.conf.erb'
+  mode    '0644'
+  owner   'root'
+  group   'root'
+  variables({
+    :verbose => '-v',
+  })
+  notifies :restart, 'service[slanger]'
+end
+
+service 'slanger' do
+  provider  Chef::Provider::Service::Upstart
+  supports  :status => true
+  action    [ :enable, :start ]
+end
