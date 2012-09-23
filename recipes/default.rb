@@ -42,6 +42,8 @@ node['rvm']['user_installs'] = [
 include_recipe 'rvm::user'
 
 # An upstart job for running slanger
+# Restart doesn't work properly so we stop the service and the service
+# definition starts it, ugly hack but it works.
 template  '/etc/init/slanger.conf' do
   source  'etc/init/slanger.conf.erb'
   mode    '0644'
@@ -50,11 +52,11 @@ template  '/etc/init/slanger.conf' do
   variables({
     :verbose => '-v',
   })
-  notifies :restart, 'service[slanger]'
+  notifies :stop, 'service[slanger]', :immediately
 end
 
 service 'slanger' do
   provider  Chef::Provider::Service::Upstart
-  supports  :status => true
+  supports  :status => true, :restart => false
   action    [ :enable, :start ]
 end
